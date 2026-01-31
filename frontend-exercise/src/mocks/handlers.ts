@@ -1,41 +1,15 @@
 import { http, HttpResponse, delay } from 'msw';
-import { Employee, DepartmentMetrics } from '../types';
+import type { DepartmentMetrics, User } from '../types';
+import { generateEmployees } from './employeeGenerator';
 
-// Mock employee data - more realistic with multiple departments
-const mockEmployees: Employee[] = [
-  // Engineering (4 employees)
-  { id: '1', name: 'Alice Johnson', email: 'alice@company.com', department: 'Engineering', hireDate: '2023-01-15', salary: 145000, title: 'Staff Engineer' },
-  { id: '2', name: 'Bob Smith', email: 'bob@company.com', department: 'Engineering', hireDate: '2023-06-01', salary: 125000, title: 'Senior Engineer' },
-  { id: '3', name: 'Eva Martinez', email: 'eva@company.com', department: 'Engineering', hireDate: '2024-02-15', salary: 110000, title: 'Engineer' },
-  { id: '4', name: 'Henry Chen', email: 'henry@company.com', department: 'Engineering', hireDate: '2024-08-01', salary: 95000, title: 'Junior Engineer' },
+const currentUser: User = {
+  id: 'user-1',
+  name: 'Test User',
+  departments: ['Engineering', 'Product', 'Design'],
+};
 
-  // Product (3 employees)
-  { id: '5', name: 'Carol Williams', email: 'carol@company.com', department: 'Product', hireDate: '2023-03-20', salary: 140000, title: 'Senior PM' },
-  { id: '6', name: 'Grace Kim', email: 'grace@company.com', department: 'Product', hireDate: '2023-09-15', salary: 125000, title: 'Product Manager' },
-  { id: '7', name: 'Mike Taylor', email: 'mike@company.com', department: 'Product', hireDate: '2024-04-01', salary: 115000, title: 'Associate PM' },
-
-  // Design (3 employees)
-  { id: '8', name: 'David Brown', email: 'david@company.com', department: 'Design', hireDate: '2023-05-10', salary: 130000, title: 'Design Lead' },
-  { id: '9', name: 'Iris Patel', email: 'iris@company.com', department: 'Design', hireDate: '2023-11-01', salary: 110000, title: 'Senior Designer' },
-  { id: '10', name: 'Nina Rodriguez', email: 'nina@company.com', department: 'Design', hireDate: '2024-06-15', salary: 85000, title: 'Designer' },
-
-  // Sales (3 employees)
-  { id: '11', name: 'Frank Lee', email: 'frank@company.com', department: 'Sales', hireDate: '2023-02-28', salary: 95000, title: 'Sales Manager' },
-  { id: '12', name: 'Jack Wilson', email: 'jack@company.com', department: 'Sales', hireDate: '2023-07-15', salary: 75000, title: 'Account Executive' },
-  { id: '13', name: 'Sarah Davis', email: 'sarah@company.com', department: 'Sales', hireDate: '2024-01-10', salary: 70000, title: 'Sales Rep' },
-
-  // Marketing (2 employees)
-  { id: '14', name: 'Tom Anderson', email: 'tom@company.com', department: 'Marketing', hireDate: '2023-04-01', salary: 105000, title: 'Marketing Manager' },
-  { id: '15', name: 'Lisa White', email: 'lisa@company.com', department: 'Marketing', hireDate: '2024-03-01', salary: 80000, title: 'Marketing Specialist' },
-
-  // Finance (2 employees)
-  { id: '16', name: 'Chris Moore', email: 'chris@company.com', department: 'Finance', hireDate: '2023-08-15', salary: 120000, title: 'Finance Manager' },
-  { id: '17', name: 'Amy Garcia', email: 'amy@company.com', department: 'Finance', hireDate: '2024-05-01', salary: 85000, title: 'Financial Analyst' },
-
-  // HR (2 employees)
-  { id: '18', name: 'Rachel Green', email: 'rachel@company.com', department: 'HR', hireDate: '2023-10-01', salary: 95000, title: 'HR Manager' },
-  { id: '19', name: 'Kevin Brown', email: 'kevin@company.com', department: 'HR', hireDate: '2024-07-15', salary: 70000, title: 'HR Coordinator' },
-];
+// Generate employees with realistic department distribution (145 total)
+const mockEmployees = generateEmployees(42);
 
 // Calculate metrics from employee data
 function calculateDepartmentMetrics(): DepartmentMetrics[] {
@@ -61,26 +35,60 @@ function calculateDepartmentMetrics(): DepartmentMetrics[] {
 }
 
 export const handlers = [
-  // Get all employees
-  http.get('/api/employees', async () => {
-    await delay(150); // Simulate network delay
-    return HttpResponse.json(mockEmployees);
+  // Get employees with optional filters
+  http.get('/api/employees', async ({ request }) => {
+    await delay(150);
+
+    const url = new URL(request.url);
+    const department = url.searchParams.get('department');
+    const name = url.searchParams.get('name');
+    const title = url.searchParams.get('title');
+    const minSalary = url.searchParams.get('minSalary');
+    const maxSalary = url.searchParams.get('maxSalary');
+    const hiredAfter = url.searchParams.get('hiredAfter');
+    const hiredBefore = url.searchParams.get('hiredBefore');
+
+    let filtered = [...mockEmployees];
+
+    if (department) {
+      filtered = filtered.filter((emp) => emp.department === department);
+    }
+    if (name) {
+      filtered = filtered.filter((emp) =>
+        emp.name.toLowerCase().includes(name.toLowerCase())
+      );
+    }
+    if (title) {
+      filtered = filtered.filter((emp) =>
+        emp.title.toLowerCase().includes(title.toLowerCase())
+      );
+    }
+    if (minSalary) {
+      filtered = filtered.filter((emp) => emp.salary >= Number(minSalary));
+    }
+    if (maxSalary) {
+      filtered = filtered.filter((emp) => emp.salary <= Number(maxSalary));
+    }
+    if (hiredAfter) {
+      filtered = filtered.filter((emp) => emp.hireDate >= hiredAfter);
+    }
+    if (hiredBefore) {
+      filtered = filtered.filter((emp) => emp.hireDate <= hiredBefore);
+    }
+
+    return HttpResponse.json(filtered);
   }),
 
   // Get department metrics (aggregated data)
   http.get('/api/departments/metrics', async () => {
-    await delay(200); // Simulate network delay
+    await delay(200);
     const metrics = calculateDepartmentMetrics();
     return HttpResponse.json(metrics);
   }),
 
-  // Get employees by department
-  http.get('/api/departments/:department/employees', async ({ params }) => {
-    await delay(150); // Simulate network delay
-    const { department } = params;
-    const employees = mockEmployees.filter(
-      emp => emp.department === decodeURIComponent(department as string)
-    );
-    return HttpResponse.json(employees);
+  // Get current user
+  http.get('/api/me', async () => {
+    await delay(100);
+    return HttpResponse.json(currentUser);
   }),
 ];

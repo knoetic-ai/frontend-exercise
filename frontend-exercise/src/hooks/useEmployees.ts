@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchEmployees } from '../api/departments';
+import type { EmployeeFilters } from '../types';
 
-export function useEmployees() {
+export function useEmployees(filters?: EmployeeFilters) {
   return useQuery({
-    queryKey: ['employees'],
-    queryFn: fetchEmployees,
+    queryKey: ['employees', filters],
+    queryFn: () => fetchEmployees(filters),
   });
 }

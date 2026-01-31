@@ -11,7 +11,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    <div className="min-h-screen bg-gray-50">
       <Outlet />
     </div>
   );

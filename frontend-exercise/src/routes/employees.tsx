@@ -1,18 +1,32 @@
+import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import type { EmployeeFilters } from '../types';
 import { useEmployees } from '../hooks/useEmployees';
-import { useTableView, useSetTableView } from '../store/dashboardStore';
+
+const employeeSearchSchema = {
+  parse: (search: Record<string, unknown>): EmployeeFilters => ({
+    department: typeof search.department === 'string' ? search.department : undefined,
+    name: typeof search.name === 'string' ? search.name : undefined,
+    title: typeof search.title === 'string' ? search.title : undefined,
+    minSalary: typeof search.minSalary === 'string' ? Number(search.minSalary) : undefined,
+    maxSalary: typeof search.maxSalary === 'string' ? Number(search.maxSalary) : undefined,
+    hiredAfter: typeof search.hiredAfter === 'string' ? search.hiredAfter : undefined,
+    hiredBefore: typeof search.hiredBefore === 'string' ? search.hiredBefore : undefined,
+  }),
+};
 
 export const Route = createFileRoute('/employees')({
+  validateSearch: employeeSearchSchema.parse,
   component: EmployeesPage,
 });
 
 function EmployeesPage() {
   const { data: employees, isLoading, error } = useEmployees();
-  const tableView = useTableView();
-  const setTableView = useSetTableView();
+  const [tableView, setTableView] = useState<'comfortable' | 'compact'>('comfortable');
+
+  const filters = Route.useSearch();
 
   const isCompact = tableView === 'compact';
-  const cellPadding = isCompact ? '8px 16px' : '12px 16px';
 
   const formatSalary = (salary: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -32,7 +46,7 @@ function EmployeesPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+      <div className="p-12 text-center text-gray-500">
         Loading employees...
       </div>
     );
@@ -40,111 +54,77 @@ function EmployeesPage() {
 
   if (error) {
     return (
-      <div style={{ padding: '48px', textAlign: 'center', color: '#dc2626' }}>
+      <div className="p-12 text-center text-red-600">
         Failed to load employees
       </div>
     );
   }
 
+  const cellPadding = isCompact ? 'py-2 px-4' : 'py-3 px-4';
+
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="p-8 max-w-6xl mx-auto">
       <Link
         to="/"
-        style={{
-          color: '#6b7280',
-          textDecoration: 'none',
-          fontSize: '14px',
-          display: 'inline-block',
-          marginBottom: '16px',
-        }}
+        className="text-gray-500 text-sm inline-block mb-4 hover:text-gray-700 transition-colors"
       >
         ← Back to Dashboard
       </Link>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h1
-            style={{
-              margin: '0 0 8px 0',
-              fontSize: '28px',
-              fontWeight: 700,
-              color: '#111827',
-            }}
-          >
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">
             Employees
           </h1>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '16px',
-              color: '#6b7280',
-            }}
-          >
+          <p className="text-base text-gray-500">
             {employees?.length || 0} total employees
           </p>
         </div>
 
-        {/* Table view toggle - working example of Zustand usage */}
-        <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f3f4f6', padding: '4px', borderRadius: '6px' }}>
+        {/* Table view toggle - resets on navigation, could use store to persist */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-md">
           <button
             onClick={() => setTableView('comfortable')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '13px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              backgroundColor: tableView === 'comfortable' ? '#ffffff' : 'transparent',
-              color: tableView === 'comfortable' ? '#111827' : '#6b7280',
-              boxShadow: tableView === 'comfortable' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-            }}
+            className={`px-3 py-1.5 text-sm rounded cursor-pointer border-none transition-colors ${
+              tableView === 'comfortable'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'bg-transparent text-gray-500 hover:text-gray-700'
+            }`}
           >
             Comfortable
           </button>
           <button
             onClick={() => setTableView('compact')}
-            style={{
-              padding: '6px 12px',
-              fontSize: '13px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              backgroundColor: tableView === 'compact' ? '#ffffff' : 'transparent',
-              color: tableView === 'compact' ? '#111827' : '#6b7280',
-              boxShadow: tableView === 'compact' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-            }}
+            className={`px-3 py-1.5 text-sm rounded cursor-pointer border-none transition-colors ${
+              tableView === 'compact'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'bg-transparent text-gray-500 hover:text-gray-700'
+            }`}
           >
             Compact
           </button>
         </div>
       </div>
 
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb',
-          overflow: 'hidden',
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ backgroundColor: '#f9fafb' }}>
-              <th style={{ padding: cellPadding, textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Name</th>
-              <th style={{ padding: cellPadding, textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Department</th>
-              <th style={{ padding: cellPadding, textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Title</th>
-              <th style={{ padding: cellPadding, textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Salary</th>
-              <th style={{ padding: cellPadding, textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Hire Date</th>
+            <tr className="bg-gray-50">
+              <th className={`${cellPadding} text-left font-semibold text-gray-700 border-b border-gray-200`}>Name</th>
+              <th className={`${cellPadding} text-left font-semibold text-gray-700 border-b border-gray-200`}>Department</th>
+              <th className={`${cellPadding} text-left font-semibold text-gray-700 border-b border-gray-200`}>Title</th>
+              <th className={`${cellPadding} text-left font-semibold text-gray-700 border-b border-gray-200`}>Salary</th>
+              <th className={`${cellPadding} text-left font-semibold text-gray-700 border-b border-gray-200`}>Hire Date</th>
             </tr>
           </thead>
           <tbody>
             {employees?.map((emp) => (
-              <tr key={emp.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                <td style={{ padding: cellPadding, color: '#111827' }}>{emp.name}</td>
-                <td style={{ padding: cellPadding, color: '#6b7280' }}>{emp.department}</td>
-                <td style={{ padding: cellPadding, color: '#6b7280' }}>{emp.title}</td>
-                <td style={{ padding: cellPadding, color: '#111827' }}>{formatSalary(emp.salary)}</td>
-                <td style={{ padding: cellPadding, color: '#6b7280' }}>{formatDate(emp.hireDate)}</td>
+              <tr key={emp.id} className="border-b border-gray-200 last:border-b-0">
+                <td className={`${cellPadding} text-gray-900`}>{emp.name}</td>
+                <td className={`${cellPadding} text-gray-500`}>{emp.department}</td>
+                <td className={`${cellPadding} text-gray-500`}>{emp.title}</td>
+                <td className={`${cellPadding} text-gray-900`}>{formatSalary(emp.salary)}</td>
+                <td className={`${cellPadding} text-gray-500`}>{formatDate(emp.hireDate)}</td>
               </tr>
             ))}
           </tbody>

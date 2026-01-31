@@ -85,27 +85,27 @@ describe('Employees Page', () => {
 
   it('renders employee data from API', async () => {
     renderEmployeesPage();
-    // Wait for employee data (from MSW mock)
+    // Wait for employee data (from MSW mock with generated employees)
     await waitFor(() => {
-      expect(screen.getByText('Alice Johnson')).toBeInTheDocument();
-      expect(screen.getByText('Staff Engineer')).toBeInTheDocument();
+      // Check for common titles from generated data
+      expect(screen.getAllByText('Principal Engineer').length).toBeGreaterThan(0);
     });
   });
 
   it('shows total employee count', async () => {
     renderEmployeesPage();
     await waitFor(() => {
-      expect(screen.getByText('19 total employees')).toBeInTheDocument();
+      expect(screen.getByText('145 total employees')).toBeInTheDocument();
     });
   });
 
   it('renders employees from multiple departments', async () => {
     renderEmployeesPage();
     await waitFor(() => {
-      // Check employees from different departments
-      expect(screen.getByText('Alice Johnson')).toBeInTheDocument(); // Engineering
-      expect(screen.getByText('Carol Williams')).toBeInTheDocument(); // Product
-      expect(screen.getByText('David Brown')).toBeInTheDocument(); // Design
+      // Check that multiple departments are represented
+      expect(screen.getAllByText('Engineering').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Product').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Design').length).toBeGreaterThan(0);
     });
   });
 
